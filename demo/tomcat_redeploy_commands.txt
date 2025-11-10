@@ -1,90 +1,79 @@
-# ===== Java Webapp -> Tomcat 9 Redeploy (PowerShell, Windows) =====
-# Run this **from the project folder that contains pom.xml**
-# Example: C:\Users\Risha\Desktop\College materials\Rutgers Semester 7\336\finalProject\336FinalProject\demo
+tomcat_deploy_explained.txt
+======================================================================
+Purpose
+======================================================================
+This script redeploys the demo web app to Tomcat on Windows.
+Run it from the project folder that contains pom.xml:
+C:\Users\Risha\Desktop\College materials\Rutgers Semester 7\336\finalProject\336FinalProject\demo
 
-# ------------------------------------------------------------------
-# 0) VARIABLES (edit these if your paths differ)
-# ------------------------------------------------------------------
-# Tomcat 9 home (keep the quotes — your path contains spaces)
+After it runs, open the app at:
+http://localhost:8081/demo/
+
+======================================================================
+Prereqs
+======================================================================
+1) Tomcat 9 is unpacked at:
+   C:\Users\Risha\Desktop\College materials\Rutgers Semester 7\336\Tomcat9\apache-tomcat-9.0.111
+2) Java 17 is installed and on PATH.
+3) mvnd (Maven Daemon) is unpacked at:
+   C:\Users\Risha\Desktop\maven-mvnd-1.0.3-windows-amd64
+4) The project builds a WAR named target\demo.war
+
+======================================================================
+Commands with plain English explanations
+======================================================================
+
+# Always run this first so paths with spaces work correctly.
+cd "C:\Users\Risha\Desktop\College materials\Rutgers Semester 7\336\finalProject\336FinalProject\demo"
+- Change directory into the project folder that holds pom.xml.
+
 $env:CATALINA_HOME = "C:\Users\Risha\Desktop\College materials\Rutgers Semester 7\336\Tomcat9\apache-tomcat-9.0.111"
+- Tell PowerShell where Tomcat lives for this session.
+- CATALINA_HOME points to the Tomcat root folder.
 
-# Maven / Maven Daemon path (pick ONE of the next 2 lines and comment the other)
-$MVN = "C:\Program Files\Apache\maven\bin\mvn.cmd"
-# $MVN = "$env:USERPROFILE\Desktop\maven-mvnd-1.0.3-windows-amd64\bin\mvnd.cmd"
-
-# If Tomcat was switched to 8081 earlier, set the port here (otherwise use 8080)
-$Port = 8081
-
-# ------------------------------------------------------------------
-# 1) STOP TOMCAT (ignore errors if not running)
-# ------------------------------------------------------------------
-& "$env:CATALINA_HOME\bin\shutdown.bat" 2>$null
+& "$env:CATALINA_HOME\bin\shutdown.bat"
 Start-Sleep -Seconds 2
+- Politely stop Tomcat if it is running.
+- Sleep 2 seconds to let the shutdown finish.
 
-# ------------------------------------------------------------------
-# 2) CLEAN OLD DEPLOYMENT + WORK CACHE (optional but recommended)
-# ------------------------------------------------------------------
 Remove-Item "$env:CATALINA_HOME\webapps\demo" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:CATALINA_HOME\webapps\demo.war" -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:CATALINA_HOME\work\Catalina\localhost\demo" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:CATALINA_HOME\temp\*" -Force -ErrorAction SilentlyContinue
+- Clean old deployment folders and the old WAR.
+- Also clear Tomcat work cache and temp files.
+- SilentlyContinue means do not error if a path is missing.
 
-# ------------------------------------------------------------------
-# 3) BUILD WAR (this MUST end with 'BUILD SUCCESS')
-# ------------------------------------------------------------------
-& $MVN -v
-& $MVN clean package
+& "$env:USERPROFILE\Desktop\maven-mvnd-1.0.3-windows-amd64\bin\mvnd.cmd" -v
+- Print mvnd version to confirm mvnd is available.
 
-# VERIFY the WAR exists
+& "$env:USERPROFILE\Desktop\maven-mvnd-1.0.3-windows-amd64\bin\mvnd.cmd" clean package
+- Build the project with mvnd.
+- clean removes target, package builds target\demo.war.
+
 if (-not (Test-Path ".\target\demo.war")) {
-  Write-Error "WAR not found: .\target\demo.war  -> check the Maven output above for compilation errors."
-  exit 1
+  Write-Error "WAR not found: .\target\demo.war  (fix compile errors above, then rerun)"
+  return
 }
+- Sanity check to make sure the WAR was produced.
+- If not found, stop here and fix build errors.
 
-# ------------------------------------------------------------------
-# 4) DEPLOY WAR
-# ------------------------------------------------------------------
 Copy-Item ".\target\demo.war" "$env:CATALINA_HOME\webapps\demo.war" -Force
+- Copy the new WAR into Tomcat webapps as demo.war.
+- Force overwrites any existing file.
 
-# ------------------------------------------------------------------
-# 5) START TOMCAT
-# ------------------------------------------------------------------
 & "$env:CATALINA_HOME\bin\startup.bat"
+- Start Tomcat. It will auto expand demo.war to webapps\demo.
 
-# Show last 40 lines of catalina log to confirm deployment
 $log = Get-ChildItem "$env:CATALINA_HOME\logs\catalina*.log" | Sort-Object LastWriteTime | Select-Object -Last 1
-Write-Host "`n--- Tail catalina log: $($log.FullName) ---"
-Get-Content $log.FullName -Tail 40
+Get-Content $log.FullName -Tail 60
+- Find the newest catalina log file and print the last 60 lines.
+- Use this to confirm deployment and check for errors.
 
-# ------------------------------------------------------------------
-# 6) QUICK SANITY CHECKS
-# ------------------------------------------------------------------
-Write-Host "`n--- Check that Tomcat is listening on port $Port ---"
-netstat -ano | findstr ":$Port"
-
-Write-Host "`n--- List webapps (should see 'demo' folder and 'demo.war') ---"
-Get-ChildItem "$env:CATALINA_HOME\webapps"
-
-Write-Host "`n--- HTTP check on the app ---"
-try {
-  $resp = Invoke-WebRequest "http://localhost:$Port/demo/" -UseBasicParsing
-  Write-Host "HTTP $($resp.StatusCode) OK"
-} catch {
-  Write-Warning "Request failed. Open http://localhost:$Port/demo/ in a browser to inspect."
-}
-
-# ------------------------------------------------------------------
-# 7) COMMON CAUSES OF 404 (/demo/)
-# ------------------------------------------------------------------
-# - The WAR didn't build (no target\demo.war) due to compile errors.
-# - The WAR didn't deploy (no webapps\demo folder after startup).
-# - Tomcat is on a different port (use $Port above).
-# - Context path != 'demo' (finalName in pom.xml should be <finalName>demo</finalName>).
-# - web.xml missing or no index.jsp under src/main/webapp/.
-#
-# Manual checks:
-#   Get-ChildItem "$env:CATALINA_HOME\webapps\demo"
-#   Get-Content $log.FullName -Tail 200 | Select-String -Pattern "deploy", "demo", "ERROR", "SEVERE"
-#
-# If the log shows a deployment error, fix it and re-run from step 1.
-# ------------------------------------------------------------------
+======================================================================
+Common notes
+======================================================================
+- If you prefer plain Maven, replace mvnd.cmd with mvn.cmd from your Maven install.
+- Port 8081 is shown in your logs. If you need 8080, change Tomcat server.xml.
+- If you change servlet mappings or web.xml, rebuild and redeploy with the same steps.
+- To verify quickly, watch for "Deployment of web application archive ... has finished" in the tail output.
