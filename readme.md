@@ -32,7 +32,7 @@ Run these commands from a Windows PowerShell window.
 
 2) Tell PowerShell where Tomcat is:
 
-  $env:CATALINA_HOME = "C:\Users\Risha\Desktop\College materials\Rutgers Semester 7\336\Tomcat9\apache-tomcat-9.0.111"
+  $env:CATALINA_HOME = "C:\Tomcat9\apache-tomcat-9.0.111"
 
 3) Stop Tomcat (ignore errors if it is not running):
 

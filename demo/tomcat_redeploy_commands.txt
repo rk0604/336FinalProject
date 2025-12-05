@@ -77,3 +77,20 @@ Common notes
 - Port 8081 is shown in your logs. If you need 8080, change Tomcat server.xml.
 - If you change servlet mappings or web.xml, rebuild and redeploy with the same steps.
 - To verify quickly, watch for "Deployment of web application archive ... has finished" in the tail output.
+
+
+
+//
+cd "C:\Users\Risha\Desktop\Rutgers Semester 7\336\336FinalProject\demo"
+mvn clean package
+copy ".\target\demo.war" "C:\tomcat9\apache-tomcat-9.0.112\webapps\demo.war"
+
+
+and then in cmd
+cd C:\tomcat9\apache-tomcat-9.0.112\bin
+shutdown.bat
+startup.bat
+
+
+testuser@example.com
+password123
