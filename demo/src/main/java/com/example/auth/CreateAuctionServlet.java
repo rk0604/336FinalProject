@@ -19,27 +19,27 @@ public class CreateAuctionServlet extends HttpServlet {
 
         try {
             String email = (String) req.getSession().getAttribute("email");
-            int userId = userDAO.getUserId(email);
+            int userId   = userDAO.getUserId(email);
 
             // Item fields
-            String title = req.getParameter("title");
-            String desc = req.getParameter("description");
-            int category = Integer.parseInt(req.getParameter("category"));
-            String size = req.getParameter("size");
-            String brand = req.getParameter("brand");
-            String color = req.getParameter("color");
-            String condition = req.getParameter("condition");
+            String title      = req.getParameter("title");
+            String desc       = req.getParameter("description");
+            int category      = Integer.parseInt(req.getParameter("category"));
+            String size       = req.getParameter("size");
+            String brand      = req.getParameter("brand");
+            String color      = req.getParameter("color");
+            String condition  = req.getParameter("condition");
 
-            // Auction fields
-            Timestamp start = Timestamp.valueOf(req.getParameter("start_time"));
-            Timestamp end = Timestamp.valueOf(req.getParameter("end_time"));
-            int startPrice = Integer.parseInt(req.getParameter("start_price"));
-            int reserve = Integer.parseInt(req.getParameter("reserve_price"));
+            // Auction fields (datetime-local -> 'YYYY-MM-DDTHH:MM')
+            String startRaw   = req.getParameter("start_time");
+            String endRaw     = req.getParameter("end_time");
+            int startPrice    = Integer.parseInt(req.getParameter("start_price"));
+            int reserve       = Integer.parseInt(req.getParameter("reserve_price"));
 
-            // Insert item
+            Timestamp start = parseDateTime(startRaw);
+            Timestamp end   = parseDateTime(endRaw);
+
             int itemId = itemDAO.createItem(userId, category, title, desc, size, brand, color, condition);
-
-            // Insert auction
             auctionDAO.createAuction(itemId, userId, start, end, startPrice, reserve);
 
             req.setAttribute("message", "Auction created successfully!");
@@ -48,5 +48,17 @@ public class CreateAuctionServlet extends HttpServlet {
         } catch (Exception e) {
             throw new ServletException(e);
         }
+    }
+
+    private Timestamp parseDateTime(String s) {
+        if (s == null || s.trim().isEmpty()) {
+            throw new IllegalArgumentException("Missing date/time");
+        }
+        // HTML datetime-local: "YYYY-MM-DDTHH:MM"
+        s = s.replace("T", " ");
+        if (s.length() == 16) {
+            s = s + ":00";  // add seconds if not present
+        }
+        return Timestamp.valueOf(s);
     }
 }

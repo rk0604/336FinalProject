@@ -1,340 +1,231 @@
-<%@ page import="java.sql.*, javax.sql.*, java.util.*" %>
+<%@ page import="java.util.*" %>
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 
+<!DOCTYPE html>
 <html>
 <head>
-    <title>Bidding Page</title>
+    <title>Browse Auctions</title>
 
-    <!-- Bootstrap -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet"
           href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 
-<style>
-    body {
-        margin: 0in;
-        font-family: Arial, sans-serif;
-        background: #f7f7f7;
-    }
-
-    .navbar-inverse {
-        background-color: #2c3e50 !important;
-        border-color: #2c3e50 !important;
-        border-radius: 0 !important;
-    }
-
-    .navbar-inverse .navbar-brand,
-    .navbar-inverse .nav > li > a {
-        color: white !important;
-        font-weight: bold;
-    }
-
-    .container {
-        padding: 40px;
-        max-width: 900px;
-        margin: auto;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-    }
-
-    h1, h2, h3 {
-        color: #2c3e50;
-    }
-
-    form {
-        border-radius: 8px;
-    }
-
-    label {
-        display: block;
-        margin-top: 12px;
-        font-weight: bold;
-    }
-
-    input, textarea {
-        width: 100%;
-        padding: 10px;
-        margin-top: 5px;
-        border: 1px solid #bdc3c7;
-        border-radius: 6px;
-        font-size: 14px;
-    }
-
-    /* Auction Cards */
-    .auction-card {
-        border: 1px solid #d8d8d8;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        background: #ffffff;
-        display: flex;
-        justify-content: space-between;
-    }
-
-	.auction-tools {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.auction-tools form {
-    margin: 0;
-}
-		
-    .auction-info {
-        max-width: 65%;
-    }
-
-    .bid-section input {
-        margin-bottom: 10px;
-    }
-
-    .auction-tools button,
-    .qna-tools button {
-        padding: 6px 10px;
-        border-radius: 4px;
-        color: white;
-        border: none;
-        margin-right: 5px;
-        font-size: 13px;
-    }
-	.auction-tools {
-	    display: flex;
-	    flex-wrap: wrap;
-	    margin-top: 10px;
-	}
-	
-	.auction-tools form {
-	    margin: 0;
-	    display: inline-block;
-	}
-    	
-</style>
+    <style>
+        body {
+            background: #f4f7fb;
+            font-family: Arial, sans-serif;
+            padding-bottom: 40px;
+        }
+        .navbar-inverse {
+            border-radius: 0;
+            background-color: #2c3e50 !important;
+            border-color: #2c3e50 !important;
+        }
+        .navbar-inverse .navbar-brand,
+        .navbar-inverse .nav > li > a {
+            color: #ecf0f1 !important;
+            font-weight: bold;
+        }
+        .auction-card {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+        }
+        .auction-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .auction-meta {
+            color: #7f8c8d;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .auction-price {
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 10px;
+        }
+        .bid-section input {
+            margin-bottom: 8px;
+        }
+        hr {
+            border-color: #d0d7de;
+        }
+        .filter-bar {
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+        }
+        .filter-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #7f8c8d;
+        }
+    </style>
 </head>
-
 <body>
+
+<%
+    String email = (String) session.getAttribute("email");
+    List<Map<String,Object>> auctions =
+       (List<Map<String,Object>>) request.getAttribute("auctions");
+    List<String> categories =
+       (List<String>) request.getAttribute("categories");
+
+    String q = (String) request.getAttribute("q");
+    String selectedCategory = (String) request.getAttribute("selectedCategory");
+    String sort = (String) request.getAttribute("sort");
+
+    if (q == null) q = "";
+    if (selectedCategory == null) selectedCategory = "";
+    if (sort == null) sort = "";
+%>
 
 <nav class="navbar navbar-inverse">
     <div class="container-fluid">
         <div class="navbar-header">
-            <a class="navbar-brand" href="#">Auction System</a>
+            <a class="navbar-brand">Auction System</a>
         </div>
+        <ul class="nav navbar-nav navbar-right">
+            <li><a href="myAlerts">My Alerts</a></li>
+            <li><a>Logged in as: <strong><%= (email != null ? email : "") %></strong></a></li>
+            <li><a href="logout">Logout</a></li>
+        </ul>
     </div>
 </nav>
 
 <div class="container">
+    <h2>Active Auctions</h2>
+    <hr/>
 
-<%
-    String role = (String) session.getAttribute("role");
-    if (role == null) role = "buyer";
-%>
+    <!-- Search / Filter / Sort bar -->
+    <div class="filter-bar">
+        <form class="form-inline" method="get" action="browseAuctions">
+            <div class="row">
+                <div class="col-sm-4">
+                    <label class="filter-label">Search</label>
+                    <input type="text" class="form-control" name="q"
+                           placeholder="Search by title, description, brand..."
+                           style="width:100%;"
+                           value="<%= q %>"/>
+                </div>
 
-<h1>Bidding Page</h1>
+                <div class="col-sm-3">
+                    <label class="filter-label">Category</label>
+                    <select name="category" class="form-control" style="width:100%;">
+                        <option value="">All categories</option>
+                        <%
+                            if (categories != null) {
+                                for (String cat : categories) {
+                        %>
+                        <option value="<%= cat %>"
+                            <%= cat.equals(selectedCategory) ? "selected" : "" %>>
+                            <%= cat %>
+                        </option>
+                        <%
+                                }
+                            }
+                        %>
+                    </select>
+                </div>
 
-<!-- ============================================================ -->
-<!-- ADVANCED SEARCH + FILTERS + SORTING                         -->
-<!-- ============================================================ -->
+                <div class="col-sm-3">
+                    <label class="filter-label">Sort by</label>
+                    <select name="sort" class="form-control" style="width:100%;">
+                        <option value="">Ending soon</option>
+                        <option value="priceAsc"  <%= "priceAsc".equals(sort)  ? "selected" : "" %>>Price: Low to High</option>
+                        <option value="priceDesc" <%= "priceDesc".equals(sort) ? "selected" : "" %>>Price: High to Low</option>
+                        <option value="title"     <%= "title".equals(sort)     ? "selected" : "" %>>Title A–Z</option>
+                    </select>
+                </div>
 
-<% if(role.equals("buyer")) { %>
-
-<h2>Browse Active Auctions</h2>
-
-<div style="background:#eef2f5; padding:15px; border-radius:8px; margin-bottom:25px;">
-
-    <!-- SEARCH BAR -->
-    <form method="GET" action="biddingpage.jsp" style="display:flex;">
-        <input type="text" name="keyword" placeholder="Search items, keywords, brands..."
-               style="flex:1; padding:10px; border-radius:6px; border:1px solid #ccc;">
-
-        <button type="submit"
-                style="padding:10px 18px; background:#2980b9; color:white; border:none; border-radius:6px;">
-            Search
-        </button>
-    </form>
-
-    <!-- SORT + CATEGORY + PRICE FILTERS -->
-
-    <div style="display:flex; gap:15px;">
-
-        <!-- SORT -->
-        <form method="GET" action="biddingpage.jsp">
-          <select name="sort" style="padding:8px; border-radius:6px;">
-              <option value="">Sort By</option>
-              <option value="price_low">Price: Low to High</option>
-              <option value="price_high">Price: High to Low</option>
-              <option value="ending_soon">Ending Soon</option>
-          </select>
-        </form>
-
-        <!-- CATEGORY (backend should generate categories) -->
-        <form method="GET" action="biddingpage.jsp">
-          <select name="category" style="padding:8px; border-radius:6px;">
-              <option value="">Filter by Category</option>
-              <option value="1">Electronics</option>
-              <option value="2">Fashion</option>
-              <option value="3">Home Items</option>
-          </select>
-        </form>
-
-        <!-- PRICE RANGE -->
-        <form method="GET" action="biddingpage.jsp" style="display:flex; gap:8px;">
-            <input type="number" name="min" placeholder="Min $" style="width:90px;">
-            <input type="number" name="max" placeholder="Max $" style="width:90px;">
+                <div class="col-sm-2" style="margin-top:22px;">
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Apply
+                    </button>
+                </div>
+            </div>
         </form>
     </div>
 
-</div>
+    <%
+        if (auctions == null || auctions.isEmpty()) {
+    %>
+        <p>No active auctions match your criteria.</p>
+    <%
+        } else {
+            for (Map<String,Object> a : auctions) {
+                int auctionId     = (Integer) a.get("auction_id");
+                String title      = (String) a.get("title");
+                String desc       = (String) a.get("description");
+                String category   = (String) a.get("category");
+                String brand      = (String) a.get("brand");
+                String color      = (String) a.get("color");
+                String size       = (String) a.get("size");
+                String condition  = (String) a.get("condition");
+                int startPrice    = (Integer) a.get("start_price");
+                java.sql.Timestamp endTime = (java.sql.Timestamp) a.get("end_time");
+    %>
 
+    <div class="auction-card">
+        <div class="auction-title"><%= title %></div>
 
-<!-- ============================================================ -->
-<!-- BEGIN AUCTION ITEM LOOP                                     -->
-<!-- ============================================================ -->
-
-<%
-    for(int i = 1; i <= 3; i++) {
-%>
-
-<div class="auction-card">
-
-    <!-- ITEM INFO -->
-    <div class="auction-info">
-        <h3>Item Placeholder <%= i %></h3>
-        <p><b>Description:</b> A sample auction item.</p>
-        <p><b>Starting Price:</b> $100</p>
-        <p><b>Status:</b> Active</p>
-        <p><b>Ends:</b> 2025-12-01 12:00:00</p>
-
-	<div class="auction-tools">
-	
-	    <!-- BID HISTORY -->
-	    <form action="viewBids.jsp" method="GET">
-	        <input type="hidden" name="auction_id" value="<%= i %>">
-	        <button style="background:#6c7ae0;">Bid History</button>
-	    </form>
-	
-	    <!-- USER PARTICIPATION -->
-	    <form action="userAuctions.jsp" method="GET">
-	        <input type="hidden" name="auction_id" value="<%= i %>">
-	        <button style="background:#3c8dbc;">User Activity</button>
-	    </form>
-	
-	    <!-- SIMILAR ITEMS -->
-	    <form action="similarItems.jsp" method="GET">
-	        <input type="hidden" name="auction_id" value="<%= i %>">
-	        <button style="background:#5cb85c;">Similar Items</button>
-	    </form>
-	
-	    <!-- SET ITEM ALERT -->
-	    <form action="setItemAlert.jsp" method="POST">
-	        <input type="hidden" name="auction_id" value="<%= i %>">
-	        <button style="background:#d9534f;">Alert Me</button>
-	    </form>
-	</div>
-		
-    </div>
-
-    <!-- BID INPUTS -->
-    <div class="bid-section" style="display:flex; flex-direction:column;">
-
-        <input class="bid-input"
-               type="number"
-               id="shared_bid_input_<%= i %>"
-               placeholder="Enter Amount ($)"
-               required />
-
-        <!-- BUTTON ROW -->
-        <div style="display:flex; gap:10px;">
-
-            <!-- MANUAL BID -->
-            <form action="placeBid.jsp" method="POST" style="margin:0;">
-                <input type="hidden" name="auction_id" value="<%= i %>"/>
-                <input type="hidden" name="bid_amount" id="manual_bid_<%= i %>" />
-                <button class="bid-btn"
-                        style="width:120px;"
-                        onclick="document.getElementById('manual_bid_<%= i %>').value =
-                                  document.getElementById('shared_bid_input_<%= i %>').value;">
-                    Manual Bid
-                </button>
-            </form>
-
-            <!-- AUTO BID -->
-            <form action="setAutoBid.jsp" method="POST" style="margin:0;">
-                <input type="hidden" name="auction_id" value="<%= i %>"/>
-                <input type="hidden" name="max_bid" id="auto_bid_<%= i %>" />
-
-                <button class="bid-btn"
-                        style="width:120px; background:#1e7ec8;"
-                        onclick="document.getElementById('auto_bid_<%= i %>').value =
-                                  document.getElementById('shared_bid_input_<%= i %>').value;">
-                    Auto Bid
-                </button>
-            </form>
-
+        <div class="auction-meta">
+            <b>Category:</b> <%= category %> |
+            <b>Brand:</b> <%= (brand != null ? brand : "N/A") %> |
+            <b>Color:</b> <%= (color != null ? color : "N/A") %> |
+            <b>Size:</b> <%= (size != null ? size : "N/A") %> |
+            <b>Condition:</b> <%= (condition != null ? condition : "N/A") %>
         </div>
 
+        <p><%= (desc != null ? desc : "") %></p>
+
+        <div class="auction-price">Starting price: $<%= startPrice %></div>
+        <div class="auction-meta">Ends: <%= endTime %></div>
+
+        <div class="row bid-section" style="margin-top:15px;">
+            <div class="col-sm-6">
+                <form action="placeBid" method="POST">
+                    <input type="hidden" name="auction_id" value="<%= auctionId %>">
+                    <label>Manual Bid</label>
+                    <input type="number" class="form-control" name="bid_amount"
+                           placeholder="Enter bid amount" min="<%= startPrice %>" required/>
+                    <button type="submit" class="btn btn-primary btn-block" style="margin-top:8px;">
+                        Place Bid
+                    </button>
+                </form>
+            </div>
+
+            <div class="col-sm-6">
+                <form action="setAutoBid" method="POST">
+                    <input type="hidden" name="auction_id" value="<%= auctionId %>">
+                    <label>Auto-Bid (Max Amount)</label>
+                    <input type="number" class="form-control" name="max_bid_amount"
+                           placeholder="Enter max auto-bid" min="<%= startPrice %>" required/>
+                    <button type="submit" class="btn btn-default btn-block" style="margin-top:8px;">
+                        Set Auto-Bid
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div style="margin-top:10px;">
+            <a href="bidHistory?auction_id=<%= auctionId %>">View Bid History</a>
+        </div>
     </div>
-</div>
 
-<% } %> 
-
-<hr>
-
-<!-- ============================================================ -->
-<!-- QUESTIONS & ANSWERS SECTION                                 -->
-<!-- ============================================================ -->
-
-<h2>Questions and Answers</h2>
-
-<div class="qna-tools" style="margin-bottom:20px;">
-
-    <form action="browseQuestions.jsp" style="display:inline;">
-        <button style="background:#2980b9;">Browse QnA</button>
-    </form>
-
-    <form action="searchQuestions.jsp" style="display:inline;">
-        <button style="background:#1e7ec8;">Search QnA</button>
-    </form>
-
-    <form action="askQuestion.jsp" style="display:inline;">
-        <button style="background:#5cb85c;">Ask Question</button>
-    </form>
-</div>
-
-<% } %>
-
-<!-- ============================================================ -->
-<!-- SELLER CREATE ITEM + AUCTION                                -->
-<!-- ============================================================ -->
-
-<% if(role.equals("seller")) { %>
-
-<h2>Create New Item and Auction</h2>
-<form action="createAuction.jsp" method="POST">
-
-    <h3>Item Details</h3>
-    <label>Title</label><input type="text" name="title" />
-    <label>Description</label><textarea name="description"></textarea>
-    <label>Category ID</label><input type="number" name="cat_id" />
-    <label>Size</label><input type="text" name="size" />
-    <label>Brand</label><input type="text" name="brand" />
-    <label>Color</label><input type="text" name="color" />
-    <label>Condition</label><input type="text" name="condition" />
-
-    <h3>Auction Details</h3>
-    <label>Start Time</label><input type="datetime-local" name="start_time" />
-    <label>End Time</label><input type="datetime-local" name="end_time" />
-    <label>Start Price</label><input type="number" name="start_price" />
-    <label>Reserve Price (Hidden)</label><input type="number" name="reserve_price" />
-
-    <button type="submit">Create Auction</button>
-</form>
-
-<% } %>
+    <%
+            } // end loop
+        }
+    %>
 
 </div>
+
 </body>
 </html>

@@ -1,4 +1,3 @@
-<%@ page import="java.sql.*, javax.sql.*, java.util.*" %>
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 
 <!DOCTYPE html>
@@ -15,33 +14,31 @@
 
     <style>
         body {
-            margin: 0in;
-            background: #f7f7f7;
+            margin: 0;
+            background: #f4f7fb;
             font-family: Arial, sans-serif;
         }
 
-        /* Navbar override for consistency */
         .navbar-inverse {
-            border-radius: 0 !important;
+            border-radius: 0;
             background-color: #2c3e50 !important;
             border-color: #2c3e50 !important;
         }
 
-        .navbar-inverse .navbar-brand,
-        .navbar-inverse .nav > li > a {
-            color: white !important;
+        .navbar-inverse .navbar-brand {
+            color: #ecf0f1 !important;
             font-weight: bold;
+            letter-spacing: 0.5px;
         }
 
-        /* Centered login box */
         .login-box {
             margin: auto;
-            max-width: 450px;
+            max-width: 420px;
             margin-top: 80px;
             padding: 35px;
             background: white;
             border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
         }
 
         h2 {
@@ -87,7 +84,6 @@
 
 <body>
 
-<!-- NAVBAR -->
 <nav class="navbar navbar-inverse">
     <div class="container-fluid">
         <div class="navbar-header">
@@ -96,33 +92,8 @@
     </div>
 </nav>
 
-<!-- LOGIN CONTAINER -->
 <div class="login-box">
-
     <h2>Login</h2>
-
-    <!-- 
-        IMPORTANT FOR BACKEND:
-        
-        When the user submits this form, loginBackend.jsp should:
-        1. SELECT user from DB:
-              SELECT * FROM User WHERE Email=? AND Password=? AND Is_active=1;
-        
-        2. If match found:
-              - create session:
-                    session.setAttribute("userID", user_id);
-                    session.setAttribute("role", Role);
-              
-              - redirect based on role:
-                    seller -> sellerDashboard.jsp
-                    buyer -> biddingPage.jsp
-                    admin -> adminDashboard.jsp
-                    rep -> repDashboard.jsp
-        
-        3. If no match:
-              - return an error message:
-                    "Invalid login, please try again."
-    -->
 
     <form action="login" method="POST">
 
@@ -138,7 +109,6 @@
     <div class="signup-link">
         <p>Don't have an account? <a href="register.jsp">Register here</a></p>
     </div>
-
 </div>
 
 </body>

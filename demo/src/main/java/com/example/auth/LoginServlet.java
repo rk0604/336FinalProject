@@ -1,7 +1,5 @@
 package com.example.auth;
 
-import com.example.auth.UserDAO;
-
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
@@ -16,11 +14,11 @@ public class LoginServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        String email = req.getParameter("email");
+        String email    = req.getParameter("email");
         String password = req.getParameter("password");
 
         try {
-            // NEW METHOD (matches UserDAO)
+            // Authenticate the user and get their role
             String role = dao.authenticateAndGetRole(email, password);
 
             if (role == null) {
@@ -29,18 +27,24 @@ public class LoginServlet extends HttpServlet {
                 return;
             }
 
+            // Look up the user's numeric ID so admin servlets can use it
+            int userId = dao.getUserId(email);
+
             HttpSession session = req.getSession(true);
             session.setAttribute("email", email);
             session.setAttribute("role", role);
+            session.setAttribute("userId", userId); // <-- needed by AdminCreateRepServlet
 
-            switch (role.toLowerCase()) {
+            String r = role.toLowerCase();
+
+            switch (r) {
                 case "seller":
-                    resp.sendRedirect("sellerDashboard.jsp");
+                    resp.sendRedirect("loadCategories");  // loads sellerDashboard with categories
                     break;
 
                 case "buyer":
-                case "customer":   // Add this line
-                    resp.sendRedirect("BiddingPage.jsp");
+                case "customer":
+                    resp.sendRedirect("browseAuctions");  // loads BiddingPage with auctions
                     break;
 
                 case "admin":

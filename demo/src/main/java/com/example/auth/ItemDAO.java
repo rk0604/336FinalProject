@@ -8,7 +8,7 @@ public class ItemDAO {
     public int createItem(int userId, int catId, String title, String desc,
                           String size, String brand, String color, String condition) throws Exception {
 
-        String sql = "INSERT INTO Item (user_id, cat_id, Title, Description, Size, Brand, Color, Condition) " +
+        String sql = "INSERT INTO Item (user_id, cat_id, Title, Description, Size, Brand, Color, Item_Condition) " +
                      "VALUES (?,?,?,?,?,?,?,?)";
 
         try (Connection cn = DBUtil.getConnection();
