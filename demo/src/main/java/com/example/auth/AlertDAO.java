@@ -52,4 +52,45 @@ public class AlertDAO {
         }
         return list;
     }
+
+    /**
+     * When a new auction is created, call this to notify users whose saved alerts
+     * match the new item (keyword + optional min/max price).
+     *
+     * We treat alerts with keywords "Outbid", "AutoBidLimitExceeded", "AuctionWon"
+     * as system alerts and ignore them for matching.
+     */
+    public void notifyItemAlertsForAuction(int auctionId) throws Exception {
+        String sql =
+            "SELECT DISTINCT A.user_id, I.Title " +
+            "FROM Auction AU " +
+            "JOIN Item I ON AU.item_id = I.item_id " +
+            "JOIN Alert A ON " +
+            "  (I.Title       LIKE CONCAT('%', A.key_word, '%') " +
+            "    OR I.Description LIKE CONCAT('%', A.key_word, '%') " +
+            "    OR I.Brand       LIKE CONCAT('%', A.key_word, '%')) " +
+            "  AND (A.min_price IS NULL OR AU.start_price >= A.min_price) " +
+            "  AND (A.max_price IS NULL OR AU.start_price <= A.max_price) " +
+            "WHERE AU.auction_id = ? " +
+            "  AND A.key_word NOT IN ('Outbid','AutoBidLimitExceeded','AuctionWon')";
+
+        try (
+            Connection cn = DBUtil.getConnection();
+            PreparedStatement ps = cn.prepareStatement(sql)
+        ) {
+            ps.setInt(1, auctionId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int userId = rs.getInt("user_id");
+                    String title = rs.getString("Title");
+
+                    // Insert a notification alert row for this user.
+                    // The message they see in My Alerts will look like:
+                    // "ItemAvailable: Nintendo Switch"
+                    createAlert(userId, "ItemAvailable: " + title, null, null);
+                }
+            }
+        }
+    }
 }

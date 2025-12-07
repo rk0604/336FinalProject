@@ -52,6 +52,9 @@
         <div class="navbar-header">
             <a class="navbar-brand">Auction System – Seller</a>
         </div>
+        <ul class="nav navbar-nav">
+            <li><a href="myAuctions">My Auctions</a></li>
+        </ul>
         <ul class="nav navbar-nav navbar-right">
             <li><a>Logged in as: <strong><%= email %></strong></a></li>
             <li><a href="logout">Logout</a></li>

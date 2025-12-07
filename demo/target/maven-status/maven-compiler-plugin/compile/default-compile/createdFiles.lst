@@ -1,5 +1,6 @@
 com\example\auth\RoleFilter.class
 com\example\auth\CustomerRepDAO.class
+com\example\auth\MyAuctionsServlet.class
 com\example\auth\UserDAO.class
 com\example\auth\PlaceBidServlet.class
 com\example\auth\AdminCreateRepServlet.class
@@ -13,10 +14,12 @@ com\example\auth\LogoutServlet.class
 com\example\auth\AutoBidDAO.class
 com\example\auth\SetAlertServlet.class
 com\example\auth\ItemDAO.class
+com\example\auth\AskQuestionServlet.class
 com\example\auth\AdminBestBuyersServlet.class
 com\example\auth\LoadCategoriesServlet.class
 com\example\auth\BidHistoryServlet.class
 com\example\auth\AdminTotalEarningsServlet.class
+com\example\auth\QuestionDAO.class
 com\example\auth\AutoBidDAO$AutoBidEntry.class
 com\example\auth\AutoBidServlet.class
 com\example\auth\CreateAuctionServlet.class

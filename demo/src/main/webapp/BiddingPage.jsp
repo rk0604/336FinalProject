@@ -92,6 +92,11 @@
         <div class="navbar-header">
             <a class="navbar-brand">Auction System</a>
         </div>
+        <ul class="nav navbar-nav">
+            <li><a href="browseAuctions">Browse</a></li>
+            <li><a href="myAuctions">My Auctions</a></li>
+            <li><a href="askQuestion">Ask a Question</a></li>
+        </ul>
         <ul class="nav navbar-nav navbar-right">
             <li><a href="myAlerts">My Alerts</a></li>
             <li><a>Logged in as: <strong><%= (email != null ? email : "") %></strong></a></li>
@@ -217,6 +222,18 @@
 
         <div style="margin-top:10px;">
             <a href="bidHistory?auction_id=<%= auctionId %>">View Bid History</a>
+        </div>
+
+        <!-- NEW: let user create an interest alert for similar items -->
+        <div style="margin-top:10px;">
+            <form action="setAlert" method="POST" class="form-inline">
+                <input type="hidden" name="keyword" value="<%= title %>">
+                <input type="hidden" name="min_price" value="">
+                <input type="hidden" name="max_price" value="">
+                <button type="submit" class="btn btn-link" style="padding-left:0;">
+                    Alert me when similar items become available
+                </button>
+            </form>
         </div>
     </div>
 

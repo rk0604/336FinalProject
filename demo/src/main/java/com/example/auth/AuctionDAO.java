@@ -16,7 +16,9 @@ public class AuctionDAO {
         String sql =
             "INSERT INTO Auction " +
             "(item_id, user_id, start_time, end_time, start_price, reserve_price, status) " +
-            "VALUES (?,?,?,?,?,?, 'active')";
+            "VALUES (?,?,?,?,?, ?, 'active')";
+
+        int auctionId = -1;
 
         try (
             Connection cn = DBUtil.getConnection();
@@ -33,11 +35,21 @@ public class AuctionDAO {
 
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) {
-                    return rs.getInt(1);
+                    auctionId = rs.getInt(1);
                 }
             }
         }
-        throw new RuntimeException("Failed to create auction");
+
+        if (auctionId == -1) {
+            throw new RuntimeException("Failed to create auction");
+        }
+
+        // After the auction is created, notify any users whose saved alerts
+        // match this item (keyword + optional price range).
+        AlertDAO alertDao = new AlertDAO();
+        alertDao.notifyItemAlertsForAuction(auctionId);
+
+        return auctionId;
     }
 
     // Close all auctions whose end_time has passed and status is still 'active'
@@ -45,7 +57,8 @@ public class AuctionDAO {
         String selectSql =
             "SELECT auction_id, reserve_price " +
             "FROM Auction " +
-            "WHERE status='active' AND end_time <= NOW()";
+            "WHERE status='active' " +
+            "AND CONVERT_TZ(end_time, '+00:00', @@session.time_zone) <= NOW()";
 
         try (
             Connection cn = DBUtil.getConnection();
@@ -116,7 +129,7 @@ public class AuctionDAO {
         closeExpiredAuctions();
 
         StringBuilder sql = new StringBuilder(
-            "SELECT A.auction_id, A.start_price, A.reserve_price, A.end_time, " +
+            "SELECT A.auction_id, A.start_price, A.reserve_price, A.end_time, A.status, A.final_price, " +
             "       I.item_id, I.Title, I.Description, I.Size, I.Brand, I.Color, I.Item_Condition, " +
             "       C.name AS category " +
             "FROM Auction A " +
@@ -167,20 +180,7 @@ public class AuctionDAO {
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("auction_id", rs.getInt("auction_id"));
-                    m.put("item_id", rs.getInt("item_id"));
-                    m.put("title", rs.getString("Title"));
-                    m.put("description", rs.getString("Description"));
-                    m.put("size", rs.getString("Size"));
-                    m.put("brand", rs.getString("Brand"));
-                    m.put("color", rs.getString("Color"));
-                    m.put("condition", rs.getString("Item_Condition"));
-                    m.put("category", rs.getString("category"));
-                    m.put("start_price", rs.getInt("start_price"));
-                    m.put("reserve_price", rs.getInt("reserve_price"));
-                    m.put("end_time", rs.getTimestamp("end_time"));
-                    list.add(m);
+                    list.add(mapAuctionRow(rs));
                 }
             }
         }
@@ -202,5 +202,84 @@ public class AuctionDAO {
             }
         }
         return categories;
+    }
+
+    // NEW: auctions where this user is the SELLER
+    public List<Map<String, Object>> getAuctionsForSeller(int sellerUserId) throws Exception {
+        String sql =
+            "SELECT A.auction_id, A.start_price, A.reserve_price, A.end_time, A.status, A.final_price, " +
+            "       I.item_id, I.Title, I.Description, I.Size, I.Brand, I.Color, I.Item_Condition, " +
+            "       C.name AS category " +
+            "FROM Auction A " +
+            "JOIN Item I ON A.item_id = I.item_id " +
+            "JOIN Category C ON I.cat_id = C.cat_id " +
+            "WHERE A.user_id = ? " +
+            "ORDER BY A.end_time DESC";
+
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (
+            Connection cn = DBUtil.getConnection();
+            PreparedStatement ps = cn.prepareStatement(sql)
+        ) {
+            ps.setInt(1, sellerUserId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapAuctionRow(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+    // NEW: auctions where this user has ever placed a BID (buyer side)
+    public List<Map<String, Object>> getAuctionsForBuyer(int buyerUserId) throws Exception {
+        String sql =
+            "SELECT DISTINCT A.auction_id, A.start_price, A.reserve_price, A.end_time, A.status, A.final_price, " +
+            "       I.item_id, I.Title, I.Description, I.Size, I.Brand, I.Color, I.Item_Condition, " +
+            "       C.name AS category " +
+            "FROM Auction A " +
+            "JOIN Item I ON A.item_id = I.item_id " +
+            "JOIN Category C ON I.cat_id = C.cat_id " +
+            "JOIN Bid B ON B.auction_id = A.auction_id " +
+            "WHERE B.user_id = ? " +
+            "ORDER BY A.end_time DESC";
+
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (
+            Connection cn = DBUtil.getConnection();
+            PreparedStatement ps = cn.prepareStatement(sql)
+        ) {
+            ps.setInt(1, buyerUserId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapAuctionRow(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+    // Helper to keep mapping consistent
+    private Map<String, Object> mapAuctionRow(ResultSet rs) throws SQLException {
+        Map<String, Object> m = new HashMap<>();
+        m.put("auction_id", rs.getInt("auction_id"));
+        m.put("item_id", rs.getInt("item_id"));
+        m.put("title", rs.getString("Title"));
+        m.put("description", rs.getString("Description"));
+        m.put("size", rs.getString("Size"));
+        m.put("brand", rs.getString("Brand"));
+        m.put("color", rs.getString("Color"));
+        m.put("condition", rs.getString("Item_Condition"));
+        m.put("category", rs.getString("category"));
+        m.put("start_price", rs.getInt("start_price"));
+        m.put("reserve_price", rs.getInt("reserve_price"));
+        m.put("end_time", rs.getTimestamp("end_time"));
+        m.put("status", rs.getString("status"));
+        m.put("final_price", rs.getObject("final_price")); // may be null
+        return m;
     }
 }
